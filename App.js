@@ -1,86 +1,94 @@
 // ============================================================
-// STAGE 1 - One bird, one screen.
+// STAGE 2 - Many birds. A list, a field to add one, a way to remove one.
 //
-// Put this in App.js and look at it next to your web Pepita.
-// The logic is IDENTICAL. Only four things changed:
+// Notice WHERE the state lives. The list of birds is not inside
+// BirdsView, it is inside App, and BirdsView receives it as props.
+// That is "lifting state up", same as on the web - because in a
+// moment a second screen will need the same birds.
 //
-//   <div>    ->  <View>          a box. No text goes directly in it.
-//   <h1>     ->  <Text>          EVERY piece of text needs one.
-//   <img>    ->  <Image>         needs a size; URLs go in source={{uri}}
-//   <input>  ->  <TextInput>     onChange -> onChangeText, and the
-//                                handler gets the TEXT, not an event.
-//   <button> ->  <Button>        title=..., onPress=...  (not onClick)
+// The bird list is drawn with .map(), exactly as you did in week 40.
+// Each child needs a key, for exactly the same reason.
 //
-// There is no CSS file. Styles are a JavaScript object.
-// This is the whole point: React did not change. The painter did.
+// When you run this you will notice something is missing: the Bird
+// screen from Stage 1 is still in this file, and there is no way to
+// reach it. That is what Stage 3 is for.
 // ============================================================
 import { useState } from "react";
-import { View, Text, Image, TextInput, Button, StyleSheet } from "react-native";
+import {
+  View, Text, TextInput, Button, ScrollView, StyleSheet
+} from "react-native";
 
-export default function App() {
-  return <Bird name="Pepita" />;
+let nextId = 1;
+
+function createBird(name) {
+  return { id: nextId++, name: name, energy: 0 };
 }
 
-function Bird({ name }) {
-  const [energy, setEnergy] = useState(0);
-  const [gramsToEat, setGramsToEat] = useState("");
-  const [kmsToFly, setKmsToFly] = useState("");
+export default function App() {
+  const [birds, setBirds] = useState([createBird("Pepita"), createBird("Pepona")]);
 
-  function eatButtonPressed() {
-    setEnergy(energy + Number(gramsToEat) * 4);
+  function addBird(name) {
+    setBirds([...birds, createBird(name)]);
   }
 
-  function flyButtonPressed() {
-    setEnergy(energy - (10 + Number(kmsToFly) * 2));
+  function removeBird(birdId) {
+    setBirds(birds.filter(bird => bird.id !== birdId));
+  }
+
+  return <BirdsView birds={birds} onAdd={addBird} onRemove={removeBird} />;
+}
+
+function BirdsView({ birds, onAdd, onRemove }) {
+  const [newName, setNewName] = useState("");
+
+  function addButtonPressed() {
+    if (newName === "") {
+      return;
+    }
+    onAdd(newName);
+    setNewName("");
   }
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.energy}>{name}'s energy: {energy} J</Text>
-
-      <Image
-        style={styles.picture}
-        source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Pied-winged_swallow_%28Hirundo_leucosoma%29.jpg/330px-Pied-winged_swallow_%28Hirundo_leucosoma%29.jpg" }}
+      <TextInput
+        style={styles.input}
+        placeholder="name"
+        value={newName}
+        onChangeText={newText => setNewName(newText)}
       />
+      <Button title="Add bird" onPress={addButtonPressed} />
 
-      <View style={styles.row}>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          placeholder="gr"
-          value={gramsToEat}
-          onChangeText={newText => setGramsToEat(newText)}
-        />
-        <Button title="Eat" onPress={eatButtonPressed} />
-      </View>
-
-      <View style={styles.row}>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          placeholder="km"
-          value={kmsToFly}
-          onChangeText={newText => setKmsToFly(newText)}
-        />
-        <Button title="Fly" onPress={flyButtonPressed} />
-      </View>
+      <ScrollView>
+        {birds.map(bird => (
+          <View style={styles.row} key={bird.id}>
+            <Text style={styles.name}>{bird.name}</Text>
+            <Button title="Remove" color="#c0392b" onPress={() => onRemove(bird.id)} />
+          </View>
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
-// The web had a .css file. Here the stylesheet is just an object.
-// Same property names, camelCased: background-color -> backgroundColor.
 const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
-  energy: { fontSize: 22, fontWeight: "600" },
-  picture: { width: 300, height: 200, borderRadius: 8 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  // paddingTop keeps us clear of the status bar and the Dynamic Island.
+  // From Stage 3 on, the navigator draws a header and does this for us.
+  screen: { flex: 1, padding: 16, paddingTop: 100, gap: 10 },
   input: {
     borderWidth: 1,
     borderColor: "#999",
     borderRadius: 6,
     padding: 10,
-    width: 140,
     fontSize: 16
-  }
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee"
+  },
+  name: { fontSize: 18, fontWeight: "600" }
 });
